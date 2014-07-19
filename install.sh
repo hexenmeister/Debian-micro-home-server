@@ -63,7 +63,8 @@ service samba stop
 	load printers = yes
 	printing = cups
 	printcap name = cups
-
+	netbios name = HOSTNAMESHORT
+	
 [printers]
 	comment = All Printers
 	path = /var/spool/samba
@@ -90,10 +91,27 @@ service samba stop
 	valid users = SMBUSER
 	force create mode = 0777
 	force directory mode = 0777
+
+[fhem]
+	comment = fhem Verzeichnis
+	path = /opt/fhem
+	valid users = SMBUSER
+	read only = No
+	create mask = 0777
+	directory mask = 0777
+
+#[www]
+#	comment = www (htdocs) Verzeichnis
+#	path = /var/www
+#	valid users = alex
+#	read only = No#z
+#	create mask = 0777
+#	directory mask = 0777
 EOF
 sed -i "s/SMBGROUP/$SMBGROUP/" /etc/samba/smb.conf
 sed -i "s/SMBUSER/$SMBUSER/" /etc/samba/smb.conf
 sed -i "s/SUBNET/$SUBNET/" /etc/samba/smb.conf
+sed -i "s/HOSTNAMESHORT/$HOSTNAMESHORT/" /etc/samba/smb.conf
 mkdir /ext
 chmod -R 777 /ext
 service samba start
@@ -242,6 +260,17 @@ apt-get -y install ntp ntpdate
 
 } #end function install_DashNTP
 #############################################################################
+
+install_MySQL (){
+echo "mysql-server-5.5 mysql-server/root_password password $mysql_pass" | debconf-set-selections
+apt-get -y install mysql-server mysql-client php5-mysql
+
+#Allow MySQL to listen on all interfaces
+cp /etc/mysql/my.cnf /etc/mysql/my.cnf.backup
+sed -i 's|bind-address           = 127.0.0.1|#bind-address           = 127.0.0.1|' /etc/mysql/my.cnf
+
+/etc/init.d/mysql restart
+}
 
 install_MySQLDovecot (){
 #############################################################################
@@ -497,6 +526,22 @@ php -q install.php
 } 
 #############################################################################
 
+install_FHEM (){
+#############################################################################
+#Install PERL
+#apt-get install -f
+apt-get -y install perl libdevice-serialport-perl libio-socket-ssl-perl libwww-perl
+#
+#Install FHEM 5.5
+cd /tmp
+wget http://fhem.de/fhem-5.5.deb 
+dpkg -i fhem-5.5.deb
+rm fhem-5.5.deb
+chmod -R a+w /opt/fhem
+usermod -aG tty fhem
+} 
+#############################################################################
+
 SECTION="Basic configuration"
 #
 # Read IP address
@@ -540,23 +585,26 @@ exitstatus=$?; if [ $exitstatus = 1 ]; then exit 1; fi
 
 install_basic
 install_DashNTP
-install_MySQLDovecot
-install_Virus
-#install_Apache
+install_MySQL
+#install_MySQLDovecot
+#install_Virus
+##install_Apache
 install_NginX
 install_PureFTPD
-install_Fail2BanDovecot
-install_Fail2BanRulesDovecot
+#install_Fail2BanDovecot
+#install_Fail2BanRulesDovecot
 install_samba
-install_scaner_and_scanbuttons
-install_ocr
-install_cups
+#install_scaner_and_scanbuttons
+#install_ocr
+#install_cups
 install_btsync
-install_temper
+#install_temper
 install_vpn_server
-apt-get -y install tvheadend
+#install_Bind
+#apt-get -y install tvheadend
 apt-get -y install transmission-cli transmission-common transmission-daemon
 install_ISPConfig
-               
+#install_Stats
+install_FHEM
 
 
