@@ -2,6 +2,7 @@ Debian-micro-home-server
 ========================
 
 Samba, TV headend, Transmission, BitTorrent Sync, SoftEther VPN server, CUPS, scanner + buttons + OCR, Postfix, Dovecot, Apache2, PHP, Mysql + phpMyAdmin install, ISPConfig 3
+HMLAND + FHEM
 
 Project realisation:
 http://www.igorpecovnik.com/2013/12/10/micro-home-server/
