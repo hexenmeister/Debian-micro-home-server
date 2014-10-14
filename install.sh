@@ -17,7 +17,7 @@ fi
 # What do we need anyway
 apt-get update
 apt-get -y upgrade
-apt-get -y install dnsutils unzip whiptail git build-essential alsa-base alsa-utils stunnel4 html2text
+apt-get -y install dnsutils unzip whiptail git build-essential alsa-base alsa-utils stunnel4 html2text curl
 
 install_basic (){
 #############################################################################
@@ -83,14 +83,22 @@ service samba stop
 	read only = yes
 	write list = SMBUSER
 	
-[ext]
+[data]
 	comment = Storage	
-	path = /ext
+	path = /mnt/data/data
 	writable = yes
 	public = no
 	valid users = SMBUSER
 	force create mode = 0777
 	force directory mode = 0777
+
+[homes]
+   comment = Home Directories
+   browseable = no
+   read only = no
+   create mask = 0700
+   directory mask = 0700
+   valid users = %S
 
 [fhem]
 	comment = fhem Verzeichnis
@@ -539,7 +547,59 @@ dpkg -i fhem-5.5.deb
 rm fhem-5.5.deb
 chmod -R a+w /opt/fhem
 usermod -aG tty fhem
-} 
+# Jabber-Perl-Module
+sudo cpan Net::Jabber
+}
+
+install_HMLAND () {
+cd /opt/
+apt-get install build-essential libusb-1.0-0-dev make gcc git-core
+git clone git://git.zerfleddert.de/hmcfgusb
+cd hmcfgusb
+make
+cat > /etc/init.d/hmland <<"EOF"
+# simple init for hmland
+
+pidfile=/var/run/hmland.pid
+port=1234
+
+case "$1" in
+ start|"")
+	chrt 50 /opt/hmcfgusb/hmland -r 03:30 -d -P -l 127.0.0.1 -p $port 2>&1 | perl -ne '$|=1; print localtime . ": [hmland] $_"' >> /var/log/hmland.log &
+	;;
+ restart|reload|force-reload)
+	echo "Error: argument '$1' not supported" >&2
+	exit 3
+	;;
+ stop)
+	killall hmland
+	;;
+ status)
+	if [ ! -e $pidfile ]; then
+		echo "No pid"
+		exit 1
+	fi
+	pid=`cat $pidfile`
+	if kill -0 $pid &>1 > /dev/null; then
+		echo "Running"
+		exit 0
+	else
+		rm $pidfile
+		echo "Not running"
+		exit 1
+	fi
+
+	;;
+ *)
+	echo "Usage: hmland [start|stop|status]" >&2
+	exit 3
+	;;
+esac
+EOF
+sudo chmod 755 /etc/init.d/hmland
+sudo update-rc.d hmland defaults
+service hmland start
+}
 #############################################################################
 
 SECTION="Basic configuration"
@@ -606,4 +666,9 @@ apt-get -y install transmission-cli transmission-common transmission-daemon
 apt-get -y install socat
 install_ISPConfig
 #install_Stats
+install_HMLAND
 install_FHEM
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4f899316364443c8c71b9d724d5cc5e8e64ec7be
