@@ -603,6 +603,7 @@ install_vpn_server
 #install_Bind
 #apt-get -y install tvheadend
 apt-get -y install transmission-cli transmission-common transmission-daemon
+apt-get -y install socat
 install_ISPConfig
 #install_Stats
 install_FHEM
