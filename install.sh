@@ -558,6 +558,7 @@ git clone git://git.zerfleddert.de/hmcfgusb
 cd hmcfgusb
 make
 cat > /etc/init.d/hmland <<"EOF"
+#!/bin/sh
 # simple init for hmland
 
 pidfile=/var/run/hmland.pid
