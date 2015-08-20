@@ -64,6 +64,7 @@ service samba stop
 	printing = cups
 	printcap name = cups
 	netbios name = HOSTNAMESHORT
+	unix extensions = no
 	
 [printers]
 	comment = All Printers
@@ -92,6 +93,24 @@ service samba stop
 	force create mode = 0777
 	force directory mode = 0777
 
+[aufnahme]
+  comment = Media Recordig
+  path = /mnt/data/data/media/aufnahmen
+  writable = yes
+  public = no
+  valid users = SMBUSER
+  force create mode = 0777
+  force directory mode = 0777
+
+[media]
+   comment = Media
+   path = /mnt/data/data/media
+   writable = yes
+   public = no
+   valid users = SMBUSER
+   force create mode = 0777
+   force directory mode = 0777
+           
 [homes]
    comment = Home Directories
    browseable = no
@@ -107,11 +126,47 @@ service samba stop
 	read only = No
 	create mask = 0777
 	directory mask = 0777
+	wide links = Yes
 
+[fhem_hdd]
+  comment = fhem Verzeichnis (HDD)
+  path = /mnt/data/fhem
+  valid users = SMBUSER
+  read only = No
+  create mask = 0777
+  directory mask = 0777
+
+[downloads]
+  comment = pyload Download Verzeichnis
+  path = /mnt/data/pyload/downloads
+  valid users = SMBUSER
+  read only = No
+  create mask = 0777
+  directory mask = 0777
+
+[backup]
+  comment = Backup Verzeichnis
+  path = /mnt/data/backup
+  #valid users = SMBUSER
+  write list = Backup
+  read list = SMBUSER
+  #read only = No
+  #writeable = no
+  #create mask = 0755
+  #directory mask = 0755
+
+[www]
+	comment = www (htdocs) Verzeichnis
+	path = /usr/share/nginx/www/
+	valid users = SMBUSER
+	read only = No#z
+	create mask = 0777
+	directory mask = 0777
+	
 #[www]
 #	comment = www (htdocs) Verzeichnis
 #	path = /var/www
-#	valid users = alex
+#	valid users = SMBUSER
 #	read only = No#z
 #	create mask = 0777
 #	directory mask = 0777
@@ -534,21 +589,98 @@ php -q install.php
 } 
 #############################################################################
 
+install_Mosquitto() {
+mkdir /var/log/mosquitto/
+chmod a+rwx /var/log/mosquitto/
+chmod o-w /var/log/mosquitto/
+apt-get install mosquitto
+chown mosquitto /var/log/mosquitto/
+}
+
 install_FHEM (){
 #############################################################################
 #Install PERL
 #apt-get install -f
 apt-get -y install perl libdevice-serialport-perl libio-socket-ssl-perl libwww-perl
 #
-#Install FHEM 5.5
+#Install FHEM 5.6
 cd /tmp
-wget http://fhem.de/fhem-5.5.deb 
-dpkg -i fhem-5.5.deb
+wget http://fhem.de/fhem-5.6.deb 
+dpkg -i fhem-5.6.deb
 rm fhem-5.5.deb
 chmod -R a+w /opt/fhem
 usermod -aG tty fhem
-# Jabber-Perl-Module
-sudo cpan Net::Jabber
+# Install Jabber-Perl-Module
+cpan Net::Jabber
+# Install Perl Telnet-Modul
+cpan Net::Telnet
+# Install Perl JSON fuer 77_UWZ.pm Modul (Unwetterzentralle)
+cpan install JSON
+# JSON PerlModul installieren (für neue FRITZBOX-Modul-Version):
+cpan JSON::XS
+# (für TR-064-Protokol)
+cpan MIME::Tools
+cpan HTTP::Daemon
+cpan SOAP::Lite
+# fuer DBPlan-Modul:
+cpan HTML::TableExtract
+cat > /etc/init.d/fhem <<"EOF"
+#!/bin/sh
+# description: Start or stop the fhem server
+# Added by Alex Peuchert
+
+# modified by A. Schulz
+
+### BEGIN INIT INFO
+# Provides:             fhem.pl
+# Required-Start:       $local_fs $remote_fs
+# Required-Stop:        $local_fs $remote_fs
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description:    FHEM server
+### END INIT INFO
+
+set -e
+cd /opt/fhem
+port=7072
+
+case "$1" in
+'start')
+        echo "Starting fhem..."
+        #perl fhem.pl fhem.cfg
+        /opt/fhem/startfhem
+        RETVAL=$?
+        ;;
+'stop')
+        echo "Stopping fhem..."
+        /opt/fhem/stopfhem
+        #perl fhem.pl $port "shutdown"
+        RETVAL=$?
+        ;;
+'status')
+        cnt=`ps -ef | grep "watchdogloop.sh" | grep -v grep | wc -l`
+        if [ "$cnt" -eq "0" ] ; then
+                echo "watchdog is not running"
+        else
+                echo "watchdog is running"
+        fi
+        cnt=`ps -ef | grep "fhem.pl" | grep -v grep | wc -l`
+        if [ "$cnt" -eq "0" ] ; then
+                echo "fhem is not running"
+        else
+                echo "fhem is running"
+        fi
+        ;;
+*)
+        echo "Usage: $0 { start | stop | status }"
+        RETVAL=1
+        ;;
+esac
+exit $RETVAL
+EOF
+chmod 755 /etc/init.d/fhem
+update-rc.d fhem defaults
+service fhem start
 }
 
 install_HMLAND () {
@@ -560,13 +692,24 @@ make
 cat > /etc/init.d/hmland <<"EOF"
 #!/bin/sh
 # simple init for hmland
+### BEGIN INIT INFO
+# Provides:          hmland
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop::    $network $local_fs $remote_fs
+# Should-Start:      $all
+# Should-Stop:       $all
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start hmland daemon at boot time
+# Description:       Provide Service to user HM-USB-CFG Adapter for FHEM.
+### END INIT INFO
 
 pidfile=/var/run/hmland.pid
 port=1234
 
 case "$1" in
  start|"")
-	chrt 50 /opt/hmcfgusb/hmland -r 03:30 -d -P -l 127.0.0.1 -p $port 2>&1 | perl -ne '$|=1; print localtime . ": [hmland] $_"' >> /var/log/hmland.log &
+	chrt 50 /opt/hmcfgusb/hmland -r 0 -d -P -l 127.0.0.1 -p $port 2>&1 | perl -ne '$|=1; print localtime . ": [hmland] $_"' >> /var/log/hmland.log &
 	;;
  restart|reload|force-reload)
 	echo "Error: argument '$1' not supported" >&2
@@ -597,8 +740,8 @@ case "$1" in
 	;;
 esac
 EOF
-sudo chmod 755 /etc/init.d/hmland
-sudo update-rc.d hmland defaults
+chmod 755 /etc/init.d/hmland
+update-rc.d hmland defaults
 service hmland start
 }
 #############################################################################
@@ -629,17 +772,17 @@ mysql_pass=$(whiptail --inputbox "What is your mysql root password?" 8 78 $mysql
 exitstatus=$?; if [ $exitstatus = 1 ]; then exit 1; fi
 
 #
-# Reade samba user
+# Read samba user
 #
 SMBUSER=$(whiptail --inputbox "What is your samba username?" 8 78 $SMBUSER --title "$SECTION" 3>&1 1>&2 2>&3)
 exitstatus=$?; if [ $exitstatus = 1 ]; then exit 1; fi
 #
-# Reade samba pass
+# Read samba pass
 #
 SMBPASS=$(whiptail --inputbox "What is your samba password?" 8 78 $SMBPASS --title "$SECTION" 3>&1 1>&2 2>&3)
 exitstatus=$?; if [ $exitstatus = 1 ]; then exit 1; fi
 #
-# Reade samba group
+# Read samba group
 #
 SMBGROUP=$(whiptail --inputbox "What is your samba group?" 8 78 $SMBGROUP --title "$SECTION" 3>&1 1>&2 2>&3)
 exitstatus=$?; if [ $exitstatus = 1 ]; then exit 1; fi
@@ -667,6 +810,7 @@ apt-get -y install transmission-cli transmission-common transmission-daemon
 apt-get -y install socat
 install_ISPConfig
 #install_Stats
+install_Mosquitto
 install_HMLAND
 install_FHEM
 <<<<<<< HEAD
