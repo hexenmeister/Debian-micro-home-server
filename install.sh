@@ -456,6 +456,11 @@ install_NginX (){
 echo 'phpmyadmin      phpmyadmin/reconfigure-webserver        multiselect' | debconf-set-selections
 echo 'phpmyadmin      phpmyadmin/dbconfig-install     boolean false' | debconf-set-selections
 
+mkdir /var/log/nginx/
+chmod a+rwx /var/log/nginx/
+#chmod o-w /var/log/nginx/
+#chown nginx /var/log/nginx/
+
 apt-get install -y nginx
 /etc/init.d/apache2 stop
 update-rc.d -f apache2 remove
