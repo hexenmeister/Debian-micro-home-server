@@ -599,7 +599,20 @@ mkdir /var/log/mosquitto/
 chmod a+rwx /var/log/mosquitto/
 chmod o-w /var/log/mosquitto/
 apt-get install mosquitto
+apt-get install mosquitto-clients
 chown mosquitto /var/log/mosquitto/
+}
+
+install_Audio() {
+apt-get install mp3wrap mpd mplayer
+#apt-get pulseaudio pulseaudio-utils pulseaudio-module-zeroconf 
+}
+
+install_X10() {
+cat > /etc/udev/rules.d/80-persistent-x10.rules <<"EOF"
+# Diese Regel sorg dafuer, dass der X10-USB-Funkempfaenger beimAnlegen für alle lesbar wird
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="0bc7", ATTRS{idProduct}=="0006", ACTION=="add", MODE="0644"
+EOF
 }
 
 install_FHEM (){
@@ -615,8 +628,13 @@ dpkg -i fhem-5.6.deb
 rm fhem-5.5.deb
 chmod -R a+w /opt/fhem
 usermod -aG tty fhem
+cpan YAML
 # Install Jabber-Perl-Module
 cpan Net::Jabber
+cpan Net::XMPP
+cpan Authen::SASL
+cpan XML::Stream
+cpan Net::SSLeay
 # Install Perl Telnet-Modul
 cpan Net::Telnet
 # Install Perl JSON fuer 77_UWZ.pm Modul (Unwetterzentralle)
@@ -624,11 +642,20 @@ cpan install JSON
 # JSON PerlModul installieren (für neue FRITZBOX-Modul-Version):
 cpan JSON::XS
 # (für TR-064-Protokol)
+apt-get install libexpat1-dev
+cpan XML::Parser
 cpan MIME::Tools
 cpan HTTP::Daemon
 cpan SOAP::Lite
 # fuer DBPlan-Modul:
 cpan HTML::TableExtract
+#fuer ENIGMA-Modul
+cpan XML::Simple
+
+cat > /etc/sudoers <<"EOF"
+fhem ALL=(ALL) NOPASSWD: /opt/fhem/runwatchdog.sh, /opt/fhem/killwatchdog.sh, /opt/fhem/watchdogloop.sh, /opt/fhem/runfhem.sh, /opt/fhem/killfhem.sh, /usr/local/bin/hmland, /usr/bin/mplayer, /usr/sbin/smartctl
+EOF
+
 cat > /etc/init.d/fhem <<"EOF"
 #!/bin/sh
 # description: Start or stop the fhem server
@@ -813,9 +840,12 @@ install_vpn_server
 #apt-get -y install tvheadend
 apt-get -y install transmission-cli transmission-common transmission-daemon
 apt-get -y install socat
+apt-get -y install smartmontools
 install_ISPConfig
 #install_Stats
 install_Mosquitto
+install_Audio
+install_X10
 install_HMLAND
 install_FHEM
 <<<<<<< HEAD
