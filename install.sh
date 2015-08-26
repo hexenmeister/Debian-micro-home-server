@@ -598,13 +598,13 @@ install_Mosquitto() {
 mkdir /var/log/mosquitto/
 chmod a+rwx /var/log/mosquitto/
 chmod o-w /var/log/mosquitto/
-apt-get install mosquitto
-apt-get install mosquitto-clients
+apt-get -y install mosquitto
+apt-get -y install mosquitto-clients
 chown mosquitto /var/log/mosquitto/
 }
 
 install_Audio() {
-apt-get install mp3wrap mpd mplayer
+apt-get -y install mp3wrap mpd mplayer
 #apt-get pulseaudio pulseaudio-utils pulseaudio-module-zeroconf 
 }
 
@@ -625,9 +625,11 @@ apt-get -y install perl libdevice-serialport-perl libio-socket-ssl-perl libwww-p
 cd /tmp
 wget http://fhem.de/fhem-5.6.deb 
 dpkg -i fhem-5.6.deb
-rm fhem-5.5.deb
-chmod -R a+w /opt/fhem
+rm fhem-5.6.deb
+chmod -R a+rw /opt/fhem
+chown -R fhem:nogroup /opt/fhem
 usermod -aG tty fhem
+usermod -s /bin/bash -d /opt/fhem  fhem
 cpan YAML
 # Install Jabber-Perl-Module
 cpan Net::Jabber
@@ -642,7 +644,7 @@ cpan install JSON
 # JSON PerlModul installieren (für neue FRITZBOX-Modul-Version):
 cpan JSON::XS
 # (für TR-064-Protokol)
-apt-get install libexpat1-dev
+apt-get -y install libexpat1-dev
 cpan XML::Parser
 cpan MIME::Tools
 cpan HTTP::Daemon
@@ -848,7 +850,4 @@ install_Audio
 install_X10
 install_HMLAND
 install_FHEM
-<<<<<<< HEAD
-=======
 
->>>>>>> 4f899316364443c8c71b9d724d5cc5e8e64ec7be
