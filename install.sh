@@ -850,4 +850,5 @@ install_Audio
 install_X10
 install_HMLAND
 install_FHEM
+cpan App::cpanminus
 
