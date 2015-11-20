@@ -651,6 +651,8 @@ cpan SOAP::Lite
 cpan HTML::TableExtract
 #fuer ENIGMA-Modul
 cpan XML::Simple
+# fuer Weather-Modul
+sudo apt-get install libdatetime-format-strptime-perl
 
 cat >> /etc/sudoers <<"EOF"
 fhem ALL=(ALL) NOPASSWD: /opt/fhem/runwatchdog.sh, /opt/fhem/killwatchdog.sh, /opt/fhem/watchdogloop.sh, /opt/fhem/runfhem.sh, /opt/fhem/killfhem.sh, /usr/local/bin/hmland, /usr/bin/mplayer, /usr/sbin/smartctl
